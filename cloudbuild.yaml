@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# === CONFIGURATION ===
+PROJECT_ID="your-gcp-project-id"
+GCS_BUCKET="your-gcs-bucket"
+CLOUD_SQL_INSTANCE="your-cloud-sql-instance"
+DB_USER="your-db-user"
+APP_ENGINE_CONFIG="./app-engine/app.yaml"
+SERVICE_ACCOUNT_KEY="service-account-key.json"  # Clé du compte de service
+
+echo "Starting deployment process using Cloud Build..."
+
+# === AUTHENTICATION (via Service Account IAM) ===
+echo "Authenticating to Google Cloud using IAM Service Account..."
+gcloud auth activate-service-account --key-file=$SERVICE_ACCOUNT_KEY
+gcloud config set project $PROJECT_ID
+
+# === ENABLE REQUIRED SERVICES ===
+echo "Enabling required Google Cloud services..."
+gcloud services enable appengine.googleapis.com \
+                        cloudbuild.googleapis.com \
+                        storage-component.googleapis.com
+
+# === TRIGGER CLOUD BUILD FOR BACKEND (App Engine) ===
+echo "Triggering Cloud Build for backend deployment..."
+gcloud builds submit --config=cloudbuild.yaml --substitutions=_APP_ENGINE_CONFIG=$APP_ENGINE_CONFIG
+
+# === TRIGGER CLOUD BUILD FOR FRONTEND (GCS) ===
+echo "Triggering Cloud Build for frontend deployment..."
+gcloud builds submit --config=cloudbuild.yaml --substitutions=_GCS_BUCKET=$GCS_BUCKET
+
+echo "Deployment process completed successfully!"
